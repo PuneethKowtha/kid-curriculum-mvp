@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "subjects": {
+    "science": {
+      "name": "Science",
+      "icon": "🚀",
+      "topics": [
+        { "id": "human-body", "name": "Human Body", "templates": ["body-parts", "systems"] },
+        { "id": "plants", "name": "Plants", "templates": ["life-cycle", "parts"] },
+        { "id": "animals", "name": "Animals", "templates": ["classification", "habitats"] },
+        { "id": "weather", "name": "Weather", "templates": ["seasons", "types"] },
+        { "id": "solar-system", "name": "Solar System", "templates": ["planets", "space"] },
+        { "id": "states-of-matter", "name": "States of Matter", "templates": ["solid-liquid-gas", "changes"] }
+      ]
+    },
+    "math": {
+      "name": "Math",
+      "icon": "🧮",
+      "topics": [
+        { "id": "addition", "name": "Addition", "templates": ["facts", "counting"] },
+        { "id": "subtraction", "name": "Subtraction", "templates": ["take-away", "difference"] },
+        { "id": "multiplication", "name": "Multiplication", "templates": ["times-tables", "skip-counting"] },
+        { "id": "division", "name": "Division", "templates": ["sharing", "grouping"] },
+        { "id": "shapes", "name": "Shapes", "templates": ["shapes-id", "properties"] },
+        { "id": "fractions", "name": "Fractions", "templates": ["parts", "comparing"] },
+        { "id": "time", "name": "Time", "templates": ["clock", "elapsed"] },
+        { "id": "money", "name": "Money", "templates": ["counting", "making-change"] }
+      ]
+    },
+    "spelling": {
+      "name": "Spelling",
+      "icon": "🔤",
+      "topics": [
+        { "id": "sight-words", "name": "Sight Words", "templates": ["common-words"] },
+        { "id": "phonics", "name": "Phonics", "templates": ["letter-sounds", "blending"] },
+        { "id": "spelling-lists", "name": "Spelling Lists", "templates": ["custom-words"] },
+        { "id": "homophones", "name": "Homophones", "templates": ["sound-alike"] }
+      ]
+    },
+    "geography": {
+      "name": "Geography",
+      "icon": "🌍",
+      "topics": [
+        { "id": "continents", "name": "Continents", "templates": ["names", "features"] },
+        { "id": "countries", "name": "Countries", "templates": ["capitals", "features"] },
+        { "id": "landforms", "name": "Landforms", "templates": ["types", "identification"] },
+        { "id": "maps", "name": "Maps", "templates": ["reading", "directions"] }
+      ]
+    }
+  },
+  "genres": [
+    { "id": "rap", "name": "Rap", "icon": "🎤", "description": "Fast and rhythmic" },
+    { "id": "pop", "name": "Pop", "icon": "🎵", "description": "Catchy and upbeat" },
+    { "id": "epic story", "name": "Epic Story", "icon": "🏰", "description": "Adventure narrative" },
+    { "id": "lullaby", "name": "Lullaby", "icon": "🌙", "description": "Calm and soothing" },
+    { "id": "dance", "name": "Dance", "icon": "💃", "description": "Upbeat rhythm" },
+    { "id": "chant", "name": "Chant", "icon": "👏", "description": "Call and response" }
+  ],
+  "grades": [1, 2, 3, 4, 5, 6, 7, 8],
+  "avatars": [
+    { "id": 1, "emoji": "🐶" },
+    { "id": 2, "emoji": "🐱" },
+    { "id": 3, "emoji": "🐰" },
+    { "id": 4, "emoji": "🦊" },
+    { "id": 5, "emoji": "🐼" },
+    { "id": 6, "emoji": "🦁" },
+    { "id": 7, "emoji": "🐸" },
+    { "id": 8, "emoji": "🦄" }
+  ]
+}
