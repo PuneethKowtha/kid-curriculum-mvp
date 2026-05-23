@@ -216,19 +216,6 @@ function Home() {
           <button onClick={() => navigate('/generator?subject=spelling')} className="bg-gradient-to-br from-green-400 to-emerald-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">🔤 Spelling</button>
           <button onClick={() => navigate('/generator?subject=geography')} className="bg-gradient-to-br from-yellow-400 to-amber-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">🌍 Geography</button>
           <button onClick={() => navigate('/library')} className="bg-gradient-to-br from-pink-400 to-rose-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">📚 Library</button>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <button onClick={() => navigate('/generator?subject=science')} className="bg-gradient-to-br from-orange-400 to-red-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
-            🚀 Science
-          </button>
-          <button onClick={() => navigate('/generator?subject=math')} className="bg-gradient-to-br from-blue-400 to-indigo-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
-            🧮 Math
-          </button>
-          <button onClick={() => navigate('/generator?subject=spelling')} className="bg-gradient-to-br from-green-400 to-emerald-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
-            🔤 Spelling
-          </button>
-          <button onClick={() => navigate('/generator?subject=geography')} className="bg-gradient-to-br from-yellow-400 to-amber-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
-            🌍 Geography
-          </button>
         </div>
 
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-6 card-pattern">
@@ -439,30 +426,6 @@ function Generator() {
       } catch (err) { toast('Failed to create song'); console.error(err); }
       finally { setGenerating(false); }
     }, 2000);
-    try {
-      const prompt = generateLyrics(subject, topicInput);
-      const res = await authAxios.post('/songs/generate', {
-        kid_id: currentKid.id,
-        subject,
-        topic: topicInput,
-        genre,
-        grade: currentKid.grade,
-        template_id: `${subject}-${topicInput.toLowerCase()}`,
-        input_values: { topic: topicInput, grade: currentKid.grade },
-        prompt,
-        customMode: true,
-        instrumental: false,
-        model: 'V4',
-        style: genre,
-        title: `${topicInput} Learning Song`
-      });
-      navigate(`/player/${res.data.id}`);
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to create song');
-      console.error(err);
-    } finally {
-      setGenerating(false);
-    }
   };
 
   const genGradients = {
@@ -619,6 +582,8 @@ function Player() {
     authAxios.get(`/songs/${id}`).then(res => setSong(res.data)).catch(console.error);
   }, [id]);
 
+  const lyricsLines = song ? song.lyrics.split('\n').filter(l => l.trim()) : [];
+
   useEffect(() => {
     if (!song?.task_id || song.status !== 'generating') return;
 
@@ -644,9 +609,9 @@ function Player() {
     { q: 'How many sides does a triangle have?', options: ['2', '3', '4'], a: '3' }
   ];
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     if (song.audio_url) return;
-    if (!('speechSynthesis' in window)) { alert('TTS not supported'); return; }
+    if (!('speechSynthesis' in window)) { toast('TTS not supported'); return; }
     setPlaying(true);
     startMusic(song.genre || 'pop');
 
@@ -1026,7 +991,7 @@ function SharedSong() {
 
   const handlePlay = () => {
     if (song.audio_url) return;
-    if (!('speechSynthesis' in window)) { alert('TTS not supported'); return; }
+    if (!('speechSynthesis' in window)) { toast('TTS not supported'); return; }
     setPlaying(true);
     const u = new SpeechSynthesisUtterance(song.lyrics);
     u.onend = () => setPlaying(false);
