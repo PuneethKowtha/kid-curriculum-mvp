@@ -1,0 +1,71 @@
+{
+  "cbse": {
+    "math": {
+      "1": ["Shapes", "Numbers 1 to 9", "Addition", "Subtraction"],
+      "2": ["Numbers 1 to 100", "Multiplication", "Division", "Time"],
+      "3": ["Fun with Numbers", "Addition & Subtraction", "Multiplication", "Shapes & Designs"],
+      "4": ["Large Numbers", "Factors", "Geometry", "Perimeter & Area"],
+      "5": ["Fractions", "Decimals", "Percentage", "Volume"]
+    },
+    "science": {
+      "1": ["My Body", "Plants Around Us", "Animals", "Food & Health"],
+      "2": ["Our Body", "Plants", "Animals & Birds", "Water"],
+      "3": ["Living & Non-Living", "Our Body", "Plants & Animals", "Air & Water"],
+      "4": ["Digestion", "Adaptations", "States of Matter", "Force & Work"],
+      "5": ["Human Senses", "Reproduction in Plants", "Simple Machines", "Natural Disasters"]
+    },
+    "spelling": {
+      "1": ["Sight Words", "Phonics A-M", "Phonics N-Z"],
+      "2": ["Phonics Blends", "Sight Words"],
+      "3": ["Homophones", "Spelling Rules"],
+      "4": ["Prefixes & Suffixes", "Silent Letters"],
+      "5": ["Advanced Homophones", "Greek & Latin Roots"]
+    }
+  },
+  "icse": {
+    "math": {
+      "1": ["Shapes & Patterns", "Numbers 1-100", "Addition", "Subtraction"],
+      "2": ["Place Value", "Multiplication", "Division", "Money"],
+      "3": ["Roman Numerals", "Fractions", "Measurement", "Geometry"],
+      "4": ["Large Numbers", "Factors & Multiples", "Perimeter & Area", "Symmetry"],
+      "5": ["Decimals", "Percentages", "Speed", "Volume & Capacity"]
+    },
+    "science": {
+      "1": ["My Body", "Plants", "Animals", "Air & Water"],
+      "2": ["Food & Nutrition", "Human Senses", "Simple Machines", "Weather"],
+      "3": ["Living Things", "Our Environment", "Matter", "Force & Energy"],
+      "4": ["Digestive System", "Plant Life", "Rocks & Minerals", "Solar System"],
+      "5": ["Human Body Systems", "Photosynthesis", "Electricity", "Natural Resources"]
+    },
+    "spelling": {
+      "1": ["Alphabet Sounds", "Sight Words", "Short Vowels"],
+      "2": ["Long Vowels", "Blends & Digraphs", "Contractions"],
+      "3": ["Homophones", "Compound Words", "Spelling Patterns"],
+      "4": ["Prefixes", "Suffixes", "Word Origins"],
+      "5": ["Advanced Vocabulary", "Spelling Rules", "Dictionary Skills"]
+    }
+  },
+  "ssc-telangana": {
+    "math": {
+      "1": ["Numbers", "Addition", "Subtraction", "Shapes"],
+      "2": ["Tables 2-5", "Multiplication", "Division", "Time & Money"],
+      "3": ["Large Numbers", "Multiplication Tables", "Shapes & Patterns", "Fractions"],
+      "4": ["Factors & Multiples", "Perimeter", "Area", "Data Handling"],
+      "5": ["Decimals", "Percentages", "Volume", "Graphs"]
+    },
+    "science": {
+      "1": ["My Body", "Plants", "Animals", "Food"],
+      "2": ["Our Body", "Plants Around Us", "Animals & Birds", "Water"],
+      "3": ["Living Things", "Our Environment", "Air & Water", "Simple Machines"],
+      "4": ["Human Body", "Plant World", "Matter & Materials", "Solar System"],
+      "5": ["Organ Systems", "Plant Reproduction", "Electricity", "Environment"]
+    },
+    "spelling": {
+      "1": ["Alphabet", "Sight Words", "Simple Words"],
+      "2": ["Phonics", "Word Building", "Spelling Patterns"],
+      "3": ["Homophones", "Compound Words", "Spelling Rules"],
+      "4": ["Prefixes", "Suffixes", "Advanced Spelling"],
+      "5": ["Advanced Vocabulary", "Dictionary Skills", "Spelling Challenges"]
+    }
+  }
+}

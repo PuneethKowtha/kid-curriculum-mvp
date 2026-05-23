@@ -74,30 +74,30 @@ app.get('/api/kids', authenticateToken, (req, res) => {
 });
 
 app.post('/api/kids', authenticateToken, (req, res) => {
-  const { name, grade, avatar_id } = req.body;
+  const { name, grade, avatar_id, curriculum } = req.body;
 
   const count = db.prepare('SELECT COUNT(*) as count FROM kid_profiles WHERE user_id = ?').get(req.user.userId);
   if (count.count >= 4) {
     return res.status(400).json({ error: 'Maximum 4 kids allowed' });
   }
 
-  const stmt = db.prepare('INSERT INTO kid_profiles (user_id, name, grade, avatar_id) VALUES (?, ?, ?, ?)');
-  const result = stmt.run(req.user.userId, name, grade, avatar_id || 1);
+  const stmt = db.prepare('INSERT INTO kid_profiles (user_id, name, grade, avatar_id, curriculum) VALUES (?, ?, ?, ?, ?)');
+  const result = stmt.run(req.user.userId, name, grade, avatar_id || 1, curriculum || 'cbse');
 
-  res.json({ id: result.lastInsertRowid, name, grade, avatar_id: avatar_id || 1 });
+  res.json({ id: result.lastInsertRowid, name, grade, avatar_id: avatar_id || 1, curriculum: curriculum || 'cbse' });
 });
 
 app.put('/api/kids/:id', authenticateToken, (req, res) => {
-  const { name, grade, avatar_id } = req.body;
+  const { name, grade, avatar_id, curriculum } = req.body;
   const { id } = req.params;
 
   const kid = db.prepare('SELECT * FROM kid_profiles WHERE id = ? AND user_id = ?').get(id, req.user.userId);
   if (!kid) return res.status(404).json({ error: 'Kid profile not found' });
 
-  const stmt = db.prepare('UPDATE kid_profiles SET name = ?, grade = ?, avatar_id = ? WHERE id = ?');
-  stmt.run(name, grade, avatar_id, id);
+  const stmt = db.prepare('UPDATE kid_profiles SET name = ?, grade = ?, avatar_id = ?, curriculum = ? WHERE id = ?');
+  stmt.run(name, grade, avatar_id, curriculum, id);
 
-  res.json({ id: parseInt(id), name, grade, avatar_id });
+  res.json({ id: parseInt(id), name, grade, avatar_id, curriculum });
 });
 
 app.delete('/api/kids/:id', authenticateToken, (req, res) => {
@@ -246,11 +246,69 @@ app.post('/api/quiz-results', authenticateToken, (req, res) => {
   res.json({ id: result.lastInsertRowid, score, total });
 });
 
+app.get('/api/prewritten-songs', (req, res) => {
+  const { subject, topic, grade, curriculum } = req.query;
+
+  let query = "SELECT * FROM songs WHERE is_prewritten = 1";
+  const params = [];
+
+  if (subject) { query += ' AND subject = ?'; params.push(subject); }
+  if (topic) { query += ' AND topic = ?'; params.push(topic); }
+  if (grade) { query += ' AND grade = ?'; params.push(parseInt(grade)); }
+  if (curriculum) { query += ' AND curriculum = ?'; params.push(curriculum); }
+
+  query += ' ORDER BY grade, topic';
+
+  const songs = db.prepare(query).all(...params);
+  res.json(songs);
+});
+
+app.get('/api/kids/:id/stats', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  const kid = db.prepare('SELECT * FROM kid_profiles WHERE id = ? AND user_id = ?').get(id, req.user.userId);
+  if (!kid) return res.status(404).json({ error: 'Kid profile not found' });
+
+  const songCount = db.prepare('SELECT COUNT(*) as count FROM songs WHERE kid_id = ? AND is_prewritten = 0').get(id);
+  let totalStars = 0;
+  let totalScore = 0;
+  let totalQuiz = 0;
+
+  const results = db.prepare('SELECT score, total FROM quiz_results WHERE kid_id = ?').all(id);
+  results.forEach(r => {
+    const pct = (r.score / r.total) * 100;
+    if (pct >= 80) totalStars += 3;
+    else if (pct >= 60) totalStars += 2;
+    else totalStars += 1;
+    totalScore += r.score;
+    totalQuiz += r.total;
+  });
+
+  const avgScore = totalQuiz > 0 ? Math.round((totalScore / totalQuiz) * 100) : 0;
+
+  res.json({
+    songsCreated: songCount.count,
+    totalStars,
+    avgScore,
+    avgScoreLabel: totalQuiz > 0 ? `${avgScore}%` : '--'
+  });
+});
+
+const fs = require('fs');
+app.get('/api/curriculums', (req, res) => {
+  const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../shared/curriculums.json'), 'utf8'));
+  res.json(data);
+});
+
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
+
+if (process.argv.includes('--seed') || !db.prepare("SELECT COUNT(*) as count FROM songs WHERE is_prewritten = 1").get().count) {
+  try { require('./seed'); } catch (e) { console.error('Seed error:', e.message); }
+}
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
