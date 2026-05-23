@@ -17,17 +17,20 @@ db.exec(`
     name TEXT NOT NULL,
     grade INTEGER NOT NULL,
     avatar_id INTEGER DEFAULT 1,
+    curriculum TEXT DEFAULT 'cbse',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS songs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kid_id INTEGER NOT NULL,
+    kid_id INTEGER,
+    user_id INTEGER,
     subject TEXT NOT NULL,
     topic TEXT NOT NULL,
     genre TEXT NOT NULL,
     grade INTEGER NOT NULL,
+    curriculum TEXT DEFAULT 'cbse',
     template_id TEXT NOT NULL,
     input_values TEXT,
     lyrics TEXT NOT NULL,
@@ -39,8 +42,20 @@ db.exec(`
     error_message TEXT,
     share_id TEXT UNIQUE,
     is_shared INTEGER DEFAULT 0,
+    is_prewritten INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (kid_id) REFERENCES kid_profiles(id)
+    FOREIGN KEY (kid_id) REFERENCES kid_profiles(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kid_id INTEGER NOT NULL,
+    song_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (kid_id) REFERENCES kid_profiles(id),
+    FOREIGN KEY (song_id) REFERENCES songs(id),
+    UNIQUE(kid_id, song_id)
   );
 
   CREATE TABLE IF NOT EXISTS quiz_results (
@@ -56,6 +71,20 @@ db.exec(`
   );
 `);
 
+try {
+  db.exec("ALTER TABLE kid_profiles ADD COLUMN curriculum TEXT DEFAULT 'cbse'");
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE songs ADD COLUMN is_prewritten INTEGER DEFAULT 0");
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE songs ADD COLUMN curriculum TEXT DEFAULT 'cbse'");
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE songs ADD COLUMN user_id INTEGER REFERENCES users(id)");
+} catch (e) {}
+
+module.exports = db;
 const songColumns = db.prepare('PRAGMA table_info(songs)').all();
 const songColumnNames = new Set(songColumns.map((column) => column.name));
 
