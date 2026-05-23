@@ -216,6 +216,19 @@ function Home() {
           <button onClick={() => navigate('/generator?subject=spelling')} className="bg-gradient-to-br from-green-400 to-emerald-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">🔤 Spelling</button>
           <button onClick={() => navigate('/generator?subject=geography')} className="bg-gradient-to-br from-yellow-400 to-amber-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">🌍 Geography</button>
           <button onClick={() => navigate('/library')} className="bg-gradient-to-br from-pink-400 to-rose-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">📚 Library</button>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <button onClick={() => navigate('/generator?subject=science')} className="bg-gradient-to-br from-orange-400 to-red-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
+            🚀 Science
+          </button>
+          <button onClick={() => navigate('/generator?subject=math')} className="bg-gradient-to-br from-blue-400 to-indigo-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
+            🧮 Math
+          </button>
+          <button onClick={() => navigate('/generator?subject=spelling')} className="bg-gradient-to-br from-green-400 to-emerald-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
+            🔤 Spelling
+          </button>
+          <button onClick={() => navigate('/generator?subject=geography')} className="bg-gradient-to-br from-yellow-400 to-amber-400 rounded-2xl p-6 text-white font-bold text-xl shadow-lg hover:scale-105 transition-transform">
+            🌍 Geography
+          </button>
         </div>
 
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-6 card-pattern">
@@ -332,8 +345,9 @@ function Generator() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setSubject(params.get('subject') || '');
-  }, [window.location.search]);
+    const subjectFromQuery = params.get('subject') || Array.from(params.keys())[0] || '';
+    setSubject(subjectFromQuery);
+  }, []);
 
   useEffect(() => {
     if (subject && currentKid) {
@@ -425,6 +439,30 @@ function Generator() {
       } catch (err) { toast('Failed to create song'); console.error(err); }
       finally { setGenerating(false); }
     }, 2000);
+    try {
+      const prompt = generateLyrics(subject, topicInput);
+      const res = await authAxios.post('/songs/generate', {
+        kid_id: currentKid.id,
+        subject,
+        topic: topicInput,
+        genre,
+        grade: currentKid.grade,
+        template_id: `${subject}-${topicInput.toLowerCase()}`,
+        input_values: { topic: topicInput, grade: currentKid.grade },
+        prompt,
+        customMode: true,
+        instrumental: false,
+        model: 'V4',
+        style: genre,
+        title: `${topicInput} Learning Song`
+      });
+      navigate(`/player/${res.data.id}`);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to create song');
+      console.error(err);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const genGradients = {
@@ -581,37 +619,34 @@ function Player() {
     authAxios.get(`/songs/${id}`).then(res => setSong(res.data)).catch(console.error);
   }, [id]);
 
-  const lyricsLines = song ? song.lyrics.split('\n').filter(l => l.trim()) : [];
-
   useEffect(() => {
-    if (!playing || lyricsLines.length === 0) return;
-    setCurrentLineIdx(0);
-    const interval = setInterval(() => {
-      setCurrentLineIdx(prev => {
-        const next = prev + 1;
-        if (next >= lyricsLines.length) { clearInterval(interval); setPlaying(false); return 0; }
-        return next;
-      });
+    if (!song?.task_id || song.status !== 'generating') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await authAxios.get(`/songs/status/${song.task_id}`);
+        setSong(res.data);
+        if (res.data.status === 'complete' || res.data.status === 'failed') {
+          clearInterval(interval);
+        }
+      } catch (error) {
+        console.error(error);
+      }
     }, 5000);
+
     return () => clearInterval(interval);
-  }, [playing, song?.id]);
+  }, [song?.task_id, song?.status]);
 
+  const quizQuestions = [
+    { q: 'What is 3 + 4?', options: ['5', '7', '9'], a: '7' },
+    { q: 'What is 5 x 2?', options: ['8', '10', '12'], a: '10' },
+    { q: 'What is 10 - 3?', options: ['5', '7', '9'], a: '7' },
+    { q: 'How many sides does a triangle have?', options: ['2', '3', '4'], a: '3' }
+  ];
 
-  const [quizQuestions, setQuizQuestions] = useState([]);
-
-  useEffect(() => {
-    if (song) {
-      const qs = getQuizForTopic(song.subject, song.topic);
-      setQuizQuestions(qs);
-    }
-  }, [song]);
-
-  const [ttsAudioUrl, setTtsAudioUrl] = useState(null);
-  const ttsAudioRef = useRef(null);
-
-  const handlePlay = async () => {
-    speechSynthesis.cancel();
-    if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current = null; }
+  const handlePlay = () => {
+    if (song.audio_url) return;
+    if (!('speechSynthesis' in window)) { alert('TTS not supported'); return; }
     setPlaying(true);
     startMusic(song.genre || 'pop');
 
@@ -721,6 +756,35 @@ function Player() {
   const playerGradient = subjectGradients[song?.subject] || 'from-purple-500 to-teal-400';
 
   if (!song) return <div className="flex items-center justify-center h-screen text-xl">Loading...</div>;
+
+  if (song.status === 'generating') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-500 to-teal-400 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
+          <div className="text-6xl mb-4 animate-bounce">🎧</div>
+          <h2 className="text-2xl font-bold mb-3">Your song is generating</h2>
+          <p className="text-gray-600 mb-4">This can take up to a minute. We refresh automatically.</p>
+          <button onClick={() => navigate('/')} className="px-6 py-3 rounded-xl font-bold bg-gray-200">Back to Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (song.status === 'failed') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-500 to-orange-400 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
+          <div className="text-5xl mb-4">😞</div>
+          <h2 className="text-2xl font-bold mb-2">Song generation failed</h2>
+          <p className="text-gray-600 mb-6">{song.error_message || 'Please try another topic or style.'}</p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => navigate('/generator?subject=' + song.subject)} className="px-5 py-3 rounded-xl font-bold bg-purple-600 text-white">Try Again</button>
+            <button onClick={() => navigate('/')} className="px-5 py-3 rounded-xl font-bold bg-gray-200">Home</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (celebration) {
     const pct = quizQuestions.length > 0 ? countUp / quizQuestions.length : 0;
@@ -930,6 +994,19 @@ function Player() {
             🔗 Share this song
           </button>
         </div>
+        {song.audio_url ? (
+          <div className="mb-4">
+            <audio className="w-full" controls src={song.audio_url} />
+          </div>
+        ) : (
+          <div className="flex justify-center gap-4 mb-4">
+            <button onClick={playing ? handleStop : handlePlay} className={`px-8 py-4 rounded-xl font-bold text-xl ${playing ? 'bg-red-500' : 'bg-purple-600'} text-white`}>
+              {playing ? '⏹️ Stop' : '▶️ Play'}
+            </button>
+            <button onClick={handlePlay} className="px-6 py-4 rounded-xl font-bold bg-teal-500 text-white">🔄 Replay</button>
+          </div>
+        )}
+        <button onClick={() => setShowQuiz(true)} className="w-full px-6 py-4 rounded-xl font-bold text-xl bg-purple-600 text-white">🎯 Take Quiz!</button>
       </div>
     </div>
   );
@@ -948,7 +1025,8 @@ function SharedSong() {
   if (!song) return <div className="flex items-center justify-center h-screen">Loading...</div>;
 
   const handlePlay = () => {
-    if (!('speechSynthesis' in window)) { toast('TTS not supported'); return; }
+    if (song.audio_url) return;
+    if (!('speechSynthesis' in window)) { alert('TTS not supported'); return; }
     setPlaying(true);
     const u = new SpeechSynthesisUtterance(song.lyrics);
     u.onend = () => setPlaying(false);
@@ -970,11 +1048,17 @@ function SharedSong() {
             {song.lyrics.split('\n').map((line, i) => <div key={i}>{line}</div>)}
           </div>
         </div>
-        <div className="flex justify-center gap-4 mb-6">
-          <button onClick={playing ? handleStop : handlePlay} className={`px-8 py-4 rounded-xl font-bold text-xl ${playing ? 'bg-red-500' : 'bg-purple-600'} text-white`}>
-            {playing ? '⏹️ Stop' : '▶️ Play'}
-          </button>
-        </div>
+        {song.audio_url ? (
+          <div className="mb-6">
+            <audio className="w-full" controls src={song.audio_url} />
+          </div>
+        ) : (
+          <div className="flex justify-center gap-4 mb-6">
+            <button onClick={playing ? handleStop : handlePlay} className={`px-8 py-4 rounded-xl font-bold text-xl ${playing ? 'bg-red-500' : 'bg-purple-600'} text-white`}>
+              {playing ? '⏹️ Stop' : '▶️ Play'}
+            </button>
+          </div>
+        )}
         <a href="/" className="block text-center px-6 py-4 rounded-xl font-bold bg-teal-500 text-white">🎤 Make Your Own!</a>
       </div>
     </div>

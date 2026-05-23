@@ -35,6 +35,11 @@ db.exec(`
     input_values TEXT,
     lyrics TEXT NOT NULL,
     audio_settings TEXT,
+    task_id TEXT,
+    status TEXT DEFAULT 'complete',
+    audio_url TEXT,
+    image_url TEXT,
+    error_message TEXT,
     share_id TEXT UNIQUE,
     is_shared INTEGER DEFAULT 0,
     is_prewritten INTEGER DEFAULT 0,
@@ -78,5 +83,29 @@ try {
 try {
   db.exec("ALTER TABLE songs ADD COLUMN user_id INTEGER REFERENCES users(id)");
 } catch (e) {}
+
+module.exports = db;
+const songColumns = db.prepare('PRAGMA table_info(songs)').all();
+const songColumnNames = new Set(songColumns.map((column) => column.name));
+
+if (!songColumnNames.has('task_id')) {
+  db.exec('ALTER TABLE songs ADD COLUMN task_id TEXT');
+}
+
+if (!songColumnNames.has('status')) {
+  db.exec("ALTER TABLE songs ADD COLUMN status TEXT DEFAULT 'complete'");
+}
+
+if (!songColumnNames.has('audio_url')) {
+  db.exec('ALTER TABLE songs ADD COLUMN audio_url TEXT');
+}
+
+if (!songColumnNames.has('image_url')) {
+  db.exec('ALTER TABLE songs ADD COLUMN image_url TEXT');
+}
+
+if (!songColumnNames.has('error_message')) {
+  db.exec('ALTER TABLE songs ADD COLUMN error_message TEXT');
+}
 
 module.exports = db;
