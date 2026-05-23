@@ -43,6 +43,16 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  CREATE TABLE IF NOT EXISTS bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kid_id INTEGER NOT NULL,
+    song_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (kid_id) REFERENCES kid_profiles(id),
+    FOREIGN KEY (song_id) REFERENCES songs(id),
+    UNIQUE(kid_id, song_id)
+  );
+
   CREATE TABLE IF NOT EXISTS quiz_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     song_id INTEGER NOT NULL,

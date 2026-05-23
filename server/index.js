@@ -263,6 +263,32 @@ app.get('/api/prewritten-songs', (req, res) => {
   res.json(songs);
 });
 
+// Bookmarks API
+app.get('/api/kids/:id/bookmarks', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const bookmarks = db.prepare('SELECT b.*, s.subject, s.topic, s.genre, s.grade, s.lyrics FROM bookmarks b JOIN songs s ON b.song_id = s.id WHERE b.kid_id = ?').all(id);
+  res.json(bookmarks);
+});
+
+app.post('/api/bookmarks', authenticateToken, (req, res) => {
+  const { kid_id, song_id } = req.body;
+  try {
+    const stmt = db.prepare('INSERT OR IGNORE INTO bookmarks (kid_id, song_id) VALUES (?, ?)');
+    const result = stmt.run(kid_id, song_id);
+    res.json({ id: result.lastInsertRowid });
+  } catch (e) {
+    res.status(400).json({ error: 'Already bookmarked' });
+  }
+});
+
+app.delete('/api/bookmarks/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const bm = db.prepare('SELECT b.* FROM bookmarks b JOIN kid_profiles kp ON b.kid_id = kp.id WHERE b.id = ? AND kp.user_id = ?').get(id, req.user.userId);
+  if (!bm) return res.status(404).json({ error: 'Bookmark not found' });
+  db.prepare('DELETE FROM bookmarks WHERE id = ?').run(id);
+  res.json({ message: 'Bookmark deleted' });
+});
+
 app.get('/api/kids/:id/stats', authenticateToken, (req, res) => {
   const { id } = req.params;
 
@@ -292,6 +318,40 @@ app.get('/api/kids/:id/stats', authenticateToken, (req, res) => {
     avgScore,
     avgScoreLabel: totalQuiz > 0 ? `${avgScore}%` : '--'
   });
+});
+
+// Google Cloud TTS (optional — falls back to Web Speech API if no key)
+app.post('/api/tts', express.json({ limit: '50kb' }), async (req, res) => {
+  const { text, languageCode = 'en-US', voiceName = '' } = req.body;
+  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'TTS not configured', fallback: true });
+
+  try {
+    const https = require('https');
+    const url = new URL(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`);
+    const body = JSON.stringify({
+      input: { ssml: `<speak>${text.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c])}</speak>` },
+      voice: { languageCode, name: voiceName || `${languageCode}-WaveNet-F`, ssmlGender: 'FEMALE' },
+      audioConfig: { audioEncoding: 'MP3', speakingRate: 0.9, pitch: 2 }
+    });
+
+    const audioBuffer = await new Promise((resolve, reject) => {
+      const req = https.request({ hostname: url.hostname, path: url.pathname + url.search, method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, resp => {
+        const chunks = []; resp.on('data', c => chunks.push(c));
+        resp.on('end', () => { try { resolve(Buffer.concat(chunks)); } catch (e) { reject(e); } });
+      });
+      req.on('error', reject); req.write(body); req.end();
+    });
+
+    const result = JSON.parse(audioBuffer.toString());
+    if (result.audioContent) {
+      res.json({ audioContent: result.audioContent, format: 'mp3' });
+    } else {
+      res.status(500).json({ error: 'TTS synthesis failed', fallback: true });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e.message, fallback: true });
+  }
 });
 
 const fs = require('fs');

@@ -20,6 +20,11 @@
       "3": ["Homophones", "Spelling Rules"],
       "4": ["Prefixes & Suffixes", "Silent Letters"],
       "5": ["Advanced Homophones", "Greek & Latin Roots"]
+    },
+    "geography": {
+      "3": ["Continents", "Maps"],
+      "4": ["Countries", "Landforms"],
+      "5": ["Climate", "Natural Resources"]
     }
   },
   "icse": {
@@ -43,6 +48,11 @@
       "3": ["Homophones", "Compound Words", "Spelling Patterns"],
       "4": ["Prefixes", "Suffixes", "Word Origins"],
       "5": ["Advanced Vocabulary", "Spelling Rules", "Dictionary Skills"]
+    },
+    "geography": {
+      "3": ["Continents", "Maps"],
+      "4": ["Countries", "Landforms"],
+      "5": ["Climate", "Natural Resources"]
     }
   },
   "ssc-telangana": {
@@ -66,6 +76,11 @@
       "3": ["Homophones", "Compound Words", "Spelling Rules"],
       "4": ["Prefixes", "Suffixes", "Advanced Spelling"],
       "5": ["Advanced Vocabulary", "Dictionary Skills", "Spelling Challenges"]
+    },
+    "geography": {
+      "3": ["Continents", "Maps"],
+      "4": ["Countries", "Landforms"],
+      "5": ["Climate", "Natural Resources"]
     }
   }
 }
