@@ -40,6 +40,9 @@ db.exec(`
     audio_url TEXT,
     image_url TEXT,
     error_message TEXT,
+    transcription_status TEXT,
+    transcription_text TEXT,
+    lyrics_timestamps_json TEXT,
     share_id TEXT UNIQUE,
     is_shared INTEGER DEFAULT 0,
     is_prewritten INTEGER DEFAULT 0,
@@ -106,6 +109,18 @@ if (!songColumnNames.has('image_url')) {
 
 if (!songColumnNames.has('error_message')) {
   db.exec('ALTER TABLE songs ADD COLUMN error_message TEXT');
+}
+
+if (!songColumnNames.has('transcription_status')) {
+  db.exec('ALTER TABLE songs ADD COLUMN transcription_status TEXT');
+}
+
+if (!songColumnNames.has('transcription_text')) {
+  db.exec('ALTER TABLE songs ADD COLUMN transcription_text TEXT');
+}
+
+if (!songColumnNames.has('lyrics_timestamps_json')) {
+  db.exec('ALTER TABLE songs ADD COLUMN lyrics_timestamps_json TEXT');
 }
 
 module.exports = db;

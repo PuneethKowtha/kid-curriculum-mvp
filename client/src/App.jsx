@@ -2,13 +2,11 @@ import React, { useState, useEffect, createContext, useContext, useRef } from 'r
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getQuizForTopic, synonymKeys, normalize } from './quizBank.js';
-import { getLyricsForTopic } from './lyricsBank.js';
 import Mascot from './components/Mascot.jsx';
 import Confetti from './components/Confetti.jsx';
 import SongLibrary from './components/SongLibrary.jsx';
 import TopicSearch from './components/TopicSearch.jsx';
 import { ToastProvider, useToast } from './components/Toast.jsx';
-import { startMusic, stopMusic } from './music/musicEngine.js';
 
 const API_URL = '/api';
 const AuthContext = createContext(null);
@@ -227,7 +225,7 @@ function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {songs.filter(s => !s.is_prewritten).slice(0, 6).map(song => (
+              {songs.slice(0, 6).map(song => (
                 <button key={song.id} onClick={() => navigate(`/player/${song.id}`)} className="bg-gray-50 rounded-xl p-4 text-left hover:bg-gray-100">
                   <div className="text-3xl mb-2">{getGenreIcon(song.genre)}</div>
                   <div className="font-bold">{song.topic}</div>
@@ -324,8 +322,6 @@ function Generator() {
   const [listening, setListening] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [curriculumTopics, setCurriculumTopics] = useState([]);
-  const [suggestedSongs, setSuggestedSongs] = useState([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const { currentKid } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -363,21 +359,6 @@ function Generator() {
     }
   }, [subject, currentKid]);
 
-  useEffect(() => {
-    if (subject && topicInput && currentKid) {
-      setLoadingSuggestions(true);
-      authAxios.get(`/prewritten-songs?subject=${subject}&grade=${currentKid.grade}&curriculum=${currentKid.curriculum || 'cbse'}`)
-        .then(res => {
-          const matched = res.data.filter(s => s.topic.toLowerCase() === topicInput.toLowerCase());
-          setSuggestedSongs(matched);
-        })
-        .catch(console.error)
-        .finally(() => setLoadingSuggestions(false));
-    } else {
-      setSuggestedSongs([]);
-    }
-  }, [subject, topicInput, currentKid]);
-
   const handleVoiceInput = () => {
     if (!('webkitSpeechRecognition' in window)) { toast('Voice input not supported'); return; }
     const recognition = new window.webkitSpeechRecognition();
@@ -389,10 +370,6 @@ function Generator() {
     recognition.onend = () => setListening(false);
   };
 
-  const handlePlaySuggested = (songId) => {
-    navigate(`/player/${songId}`);
-  };
-
   const genres = [
     { id: 'rap', icon: '🎤', label: 'Rap' },
     { id: 'pop', icon: '🎵', label: 'Pop' },
@@ -402,30 +379,29 @@ function Generator() {
     { id: 'chant', icon: '👏', label: 'Chant' }
   ];
 
-  const generateLyrics = (subj, topic) => getLyricsForTopic(subj, topic);
-
   const handleGenerate = async () => {
     if (!topicInput) { toast('Please enter or say a topic!'); return; }
     setGenerating(true);
-    setTimeout(async () => {
-      try {
-        const lyrics = generateLyrics(subject, topicInput);
-        const res = await authAxios.post('/songs', {
-          kid_id: currentKid.id,
-          subject,
-          topic: topicInput,
-          genre,
-          grade: currentKid.grade,
-          curriculum: currentKid.curriculum || 'cbse',
-          template_id: `${subject}-${topicInput.toLowerCase().replace(/\s+/g, '-')}`,
-          input_values: { topic: topicInput, grade: currentKid.grade },
-          lyrics,
-          audio_settings: { speed: 1, pitch: 1 }
-        });
-        navigate(`/player/${res.data.id}`);
-      } catch (err) { toast('Failed to create song'); console.error(err); }
-      finally { setGenerating(false); }
-    }, 2000);
+    try {
+      const res = await authAxios.post('/songs/generate-one', {
+        kid_id: currentKid.id,
+        subject,
+        topic: topicInput,
+        genre,
+        grade: currentKid.grade,
+        curriculum: currentKid.curriculum || 'cbse',
+        template_id: `${subject}-${topicInput.toLowerCase().replace(/\s+/g, '-')}`,
+        input_values: { topic: topicInput, grade: currentKid.grade },
+        style: genre,
+        title: `${topicInput} Learning Song`
+      });
+      navigate(`/player/${res.data.id}`);
+    } catch (err) {
+      toast(err.response?.data?.error || 'Failed to create song');
+      console.error(err);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const genGradients = {
@@ -516,28 +492,6 @@ function Generator() {
           </div>
         </div>
 
-        {topicInput && (
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-lg mb-4 card-pattern">
-            <h3 className="font-bold mb-2">🎵 Suggested Songs</h3>
-            {loadingSuggestions ? (
-              <p className="text-gray-400 text-sm">Loading...</p>
-            ) : suggestedSongs.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {suggestedSongs.map(s => (
-                  <button key={s.id} onClick={() => handlePlaySuggested(s.id)} className="flex-shrink-0 bg-purple-50 rounded-xl p-3 text-left hover:bg-purple-100 w-40">
-                    <div className="text-2xl mb-1">{getGenreIcon(s.genre)}</div>
-                    <div className="font-bold text-sm">{s.topic}</div>
-                    <div className="text-xs text-gray-500">{s.genre}</div>
-                    <div className="text-purple-600 text-xs mt-1">▶ Play</div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 text-sm">No pre-written songs found. You can create a new one!</p>
-            )}
-          </div>
-        )}
-
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-4 card-pattern">
           <h2 className="text-xl font-bold mb-4">Pick Your Style</h2>
           <div className="grid grid-cols-3 gap-3">
@@ -577,21 +531,41 @@ function Player() {
   const toast = useToast();
   const id = window.location.pathname.split('/').pop();
   const answerConfettiRef = useRef(null);
+  const audioElementRef = useRef(null);
+  const lyricsContainerRef = useRef(null);
 
   useEffect(() => {
     authAxios.get(`/songs/${id}`).then(res => setSong(res.data)).catch(console.error);
   }, [id]);
 
   const lyricsLines = song ? song.lyrics.split('\n').filter(l => l.trim()) : [];
+  let timedLyricsLines = [];
+  if (song?.lyrics_timestamps_json) {
+    try {
+      const parsed = JSON.parse(song.lyrics_timestamps_json);
+      if (Array.isArray(parsed)) timedLyricsLines = parsed;
+    } catch {
+      timedLyricsLines = [];
+    }
+  }
+  const syncedLines = timedLyricsLines.length > 0
+    ? timedLyricsLines
+    : lyricsLines.map((line) => ({ text: line }));
 
   useEffect(() => {
-    if (!song?.task_id || song.status !== 'generating') return;
+    if (!song?.task_id) return;
+
+    const needsSongPolling = song.status === 'generating';
+    const needsTranscriptionPolling = song.status === 'complete' && song.audio_url && song.transcription_status !== 'complete' && song.transcription_status !== 'failed';
+    if (!needsSongPolling && !needsTranscriptionPolling) return;
 
     const interval = setInterval(async () => {
       try {
         const res = await authAxios.get(`/songs/status/${song.task_id}`);
         setSong(res.data);
-        if (res.data.status === 'complete' || res.data.status === 'failed') {
+        const songDone = res.data.status === 'complete' || res.data.status === 'failed';
+        const transcriptionDone = !res.data.audio_url || res.data.transcription_status === 'complete' || res.data.transcription_status === 'failed';
+        if (songDone && transcriptionDone) {
           clearInterval(interval);
         }
       } catch (error) {
@@ -609,44 +583,47 @@ function Player() {
     { q: 'How many sides does a triangle have?', options: ['2', '3', '4'], a: '3' }
   ];
 
-  const handlePlay = async () => {
-    if (song.audio_url) return;
-    if (!('speechSynthesis' in window)) { toast('TTS not supported'); return; }
-    setPlaying(true);
-    startMusic(song.genre || 'pop');
+  useEffect(() => {
+    if (!playing) return;
+    const container = lyricsContainerRef.current;
+    if (!container) return;
+    const activeNode = container.querySelector(`[data-line-index="${currentLineIdx}"]`);
+    if (activeNode?.scrollIntoView) {
+      activeNode.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, [currentLineIdx, playing]);
 
-    // Try Google Cloud TTS first
-    try {
-      const res = await authAxios.post('/tts', { text: song.lyrics, languageCode: 'en-US' });
-      if (res.data.audioContent) {
-        const audio = new Audio(`data:audio/mp3;base64,${res.data.audioContent}`);
-        ttsAudioRef.current = audio;
-        audio.volume = 0.5;
-        audio.onended = () => { setPlaying(false); setCurrentLineIdx(0); stopMusic(); };
-        audio.play().catch(() => fallbackTTS());
-        return;
-      }
-    } catch (e) { /* fallback to Web Speech */ }
-    fallbackTTS();
+  const handleAudioTimeUpdate = () => {
+    if (!audioElementRef.current || syncedLines.length === 0) return;
+    const t = audioElementRef.current.currentTime;
+    const idx = syncedLines.findIndex((line) => {
+      if (typeof line.start !== 'number' || typeof line.end !== 'number') return false;
+      return t >= line.start && t <= line.end;
+    });
+    if (idx >= 0 && idx !== currentLineIdx) {
+      setCurrentLineIdx(idx);
+    }
   };
 
-  const fallbackTTS = () => {
-    if (!('speechSynthesis' in window)) { toast('TTS not supported'); return; }
-    const u = new SpeechSynthesisUtterance(song.lyrics);
-    const voices = speechSynthesis.getVoices();
-    const goodVoice = voices.find(v => /female|zira|natural/i.test(v.name)) || voices.find(v => /english|en-/i.test(v.lang)) || voices[0];
-    if (goodVoice) u.voice = goodVoice;
-    u.rate = 0.85;
-    u.pitch = 1.2;
-    u.onend = () => { setPlaying(false); setCurrentLineIdx(0); stopMusic(); };
-    speechSynthesis.speak(u);
+  const handlePlay = async () => {
+    if (song.audio_url) {
+      const audioEl = audioElementRef.current;
+      if (!audioEl) return;
+      try {
+        await audioEl.play();
+        setPlaying(true);
+        return;
+      } catch {
+        toast('Could not start audio playback');
+        return;
+      }
+    }
+    toast('Song audio is still generating. Please wait.');
   };
 
   const handleStop = () => {
     setPlaying(false); setCurrentLineIdx(0);
-    speechSynthesis.cancel();
-    if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current = null; setTtsAudioUrl(null); }
-    stopMusic();
+    if (audioElementRef.current) audioElementRef.current.pause();
   };
 
   const fireMiniConfetti = () => {
@@ -933,22 +910,49 @@ function Player() {
         </div>
         <p className="text-center text-gray-500 text-sm mb-4">{song.subject} · {song.genre} · Grade {song.grade}</p>
 
-        <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-6 mb-4 min-h-[250px] max-h-[400px] overflow-y-auto">
+        {song.audio_url && song.transcription_status && song.transcription_status !== 'complete' && (
+          <div className="mb-3 rounded-xl bg-amber-50 text-amber-800 px-4 py-2 text-sm text-center">
+            Syncing lyrics with audio...
+          </div>
+        )}
+
+        <div ref={lyricsContainerRef} className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl p-6 mb-4 min-h-[250px] max-h-[400px] overflow-y-auto">
           <div className="text-lg leading-relaxed text-center space-y-3">
-            {lyricsLines.map((line, i) => (
-              <div key={i} className={`transition-all duration-500 px-4 py-2 rounded-lg ${playing && currentLineIdx === i ? 'bg-purple-100 text-purple-900 font-bold scale-105 shadow-md animate-glow' : playing && currentLineIdx > i ? 'text-gray-400' : 'text-gray-700'}`}>
-                {line}
+            {syncedLines.map((line, i) => (
+              <div
+                key={`${i}-${line.text}`}
+                data-line-index={i}
+                className={`transition-all duration-500 px-4 py-2 rounded-lg ${playing && currentLineIdx === i ? 'bg-purple-100 text-purple-900 font-bold scale-105 shadow-md animate-glow' : playing && currentLineIdx > i ? 'text-gray-400' : 'text-gray-700'}`}
+              >
+                {line.text}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex justify-center gap-4 mb-4">
-          <button onClick={playing ? handleStop : handlePlay} className={`px-10 py-4 rounded-2xl font-bold text-xl ${playing ? 'bg-red-500' : 'bg-purple-600'} text-white hover:opacity-90 transition-all shadow-md`}>
-            {playing ? '⏹️ Stop' : '▶️ Play'}
-          </button>
-          <button onClick={handlePlay} className="px-6 py-4 rounded-2xl font-bold bg-teal-500 text-white hover:opacity-90 shadow-md">🔄 Replay</button>
-        </div>
+        {song.audio_url ? (
+          <div className="mb-4">
+            <audio
+              ref={audioElementRef}
+              className="w-full"
+              controls
+              src={song.audio_url}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+              onEnded={() => {
+                setPlaying(false);
+                setCurrentLineIdx(0);
+              }}
+              onTimeUpdate={handleAudioTimeUpdate}
+            />
+          </div>
+        ) : (
+          <div className="flex justify-center gap-4 mb-4">
+            <button onClick={playing ? handleStop : handlePlay} className={`px-10 py-4 rounded-2xl font-bold text-xl ${playing ? 'bg-red-500' : 'bg-purple-600'} text-white hover:opacity-90 transition-all shadow-md`}>
+              {playing ? '⏹️ Stop' : '▶️ Play'}
+            </button>
+          </div>
+        )}
 
         <button onClick={() => { handleStop(); setShowQuiz(true); }} className="w-full px-6 py-4 rounded-2xl font-bold text-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg">
           🎯 Take Quiz!
@@ -959,19 +963,6 @@ function Player() {
             🔗 Share this song
           </button>
         </div>
-        {song.audio_url ? (
-          <div className="mb-4">
-            <audio className="w-full" controls src={song.audio_url} />
-          </div>
-        ) : (
-          <div className="flex justify-center gap-4 mb-4">
-            <button onClick={playing ? handleStop : handlePlay} className={`px-8 py-4 rounded-xl font-bold text-xl ${playing ? 'bg-red-500' : 'bg-purple-600'} text-white`}>
-              {playing ? '⏹️ Stop' : '▶️ Play'}
-            </button>
-            <button onClick={handlePlay} className="px-6 py-4 rounded-xl font-bold bg-teal-500 text-white">🔄 Replay</button>
-          </div>
-        )}
-        <button onClick={() => setShowQuiz(true)} className="w-full px-6 py-4 rounded-xl font-bold text-xl bg-purple-600 text-white">🎯 Take Quiz!</button>
       </div>
     </div>
   );
@@ -979,26 +970,13 @@ function Player() {
 
 function SharedSong() {
   const [song, setSong] = useState(null);
-  const [playing, setPlaying] = useState(false);
   const shareId = window.location.pathname.split('/').pop();
-  const toast = useToast();
 
   useEffect(() => {
     authAxios.get(`/shared/${shareId}`).then(res => setSong(res.data)).catch(console.error);
   }, [shareId]);
 
   if (!song) return <div className="flex items-center justify-center h-screen">Loading...</div>;
-
-  const handlePlay = () => {
-    if (song.audio_url) return;
-    if (!('speechSynthesis' in window)) { toast('TTS not supported'); return; }
-    setPlaying(true);
-    const u = new SpeechSynthesisUtterance(song.lyrics);
-    u.onend = () => setPlaying(false);
-    speechSynthesis.speak(u);
-  };
-
-  const handleStop = () => { setPlaying(false); speechSynthesis.cancel(); };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 to-teal-400 p-4 flex items-center">
@@ -1018,10 +996,8 @@ function SharedSong() {
             <audio className="w-full" controls src={song.audio_url} />
           </div>
         ) : (
-          <div className="flex justify-center gap-4 mb-6">
-            <button onClick={playing ? handleStop : handlePlay} className={`px-8 py-4 rounded-xl font-bold text-xl ${playing ? 'bg-red-500' : 'bg-purple-600'} text-white`}>
-              {playing ? '⏹️ Stop' : '▶️ Play'}
-            </button>
+          <div className="text-center text-sm text-gray-500 mb-6">
+            Audio is not available for this shared song yet.
           </div>
         )}
         <a href="/" className="block text-center px-6 py-4 rounded-xl font-bold bg-teal-500 text-white">🎤 Make Your Own!</a>
